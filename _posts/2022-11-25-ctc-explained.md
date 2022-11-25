@@ -14,7 +14,7 @@ Overall the article is partitioned into the following sections:
   * Connectionist temporal classification as a likelihood function
   * Defining valid paths
   * The learning algorithm
-    * The forward variable \( \alpha \)
+    * The forward variable $$\alpha$$
     * The backward variable \( \beta \)
   * Towards a maximum likelihood function
   * The error function
