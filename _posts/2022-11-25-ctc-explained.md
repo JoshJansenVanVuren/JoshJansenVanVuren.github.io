@@ -53,7 +53,7 @@ The CTC loss function expects the prediction vector $\hat{\boldsymbol{y}}^{(i)}$
 
 Consequentially, we can the calculate the probability of observing a certain sequence of characters - defined as the path $\boldsymbol{l}=\{l^{(1)},l^{(2)},\dots,l^{(n_i)}\}$ - through our prediction $\hat{\boldsymbol{Y}}=\{\hat{\boldsymbol{y}}^{(1)},\hat{\boldsymbol{y}}^{(2)},\dots,\hat{\boldsymbol{y}}^{(n_y)}\}$ using:
 
-$$p(\boldsymbol{l}|\boldsymbol{X})=\prod_{i=1}^{n_i}\hat{y}^{(i)}_{l^{(i)}}$$
+$$p(\boldsymbol{l} \mid \boldsymbol{X})=\prod_{i=1}^{n_i}\hat{y}^{(i)}_{l^{(i)}}$$
 
 Where the scalar $\hat{y}^{(i)}_{l^{(i)}}$ is the probability assigned to character $l^{(i)}$ at timestep $i$.
 
@@ -62,7 +62,7 @@ Where the scalar $\hat{y}^{(i)}_{l^{(i)}}$ is the probability assigned to charac
 One of the fundamental challenges in speech recognition is the mistmatch between the length of input and output sequences ($n_x \not= n_y$), and the variance in the input features $\boldsymbol{X}$ between speakers and dependency on the rate of speech.
 The advantage to CTC is the simple two rule set which allow sequences variable len $n_x$ to be matched to arbirtarty target sequences $n_y$.
 
-Given that we are constrained to predicting characters within the range "a-z", with an additional space character ("|").
+Given that we are constrained to predicting characters within the range "a-z", with an additional space character ("$\mid$").
 We additionally add a blank character "-".
 
 Then we define the following two rules to decode any labelling $\boldsymbol{l}$:
@@ -73,11 +73,11 @@ This rule set is imposed by defining a mapping function $\beta$ (which is a many
 
 Then the inverse of the many to one mapping $\beta^{-1}$ can be used to determine the probability of a target sequence $\boldsymbol{y}$ by summing the probabilities of all the valid paths ($\boldsymbol{l}$) which would result in the target sequence $\beta(\boldsymbol{l})=\boldsymbol{y}$:
 
-$$p(\boldsymbol{y}|\boldsymbol{X})=\sum_{\boldsymbol{l}\in \beta^{-1}(\boldsymbol{y})} p(\boldsymbol{l}|\boldsymbol{X})$$
+$$p(\boldsymbol{y} \mid \boldsymbol{X})=\sum_{\boldsymbol{l}\in \beta^{-1}(\boldsymbol{y})} p(\boldsymbol{l} \mid \boldsymbol{X})$$
 
 ## The learning algorithm
 
-At first it seems that calculating the conditional probability $p(\boldsymbol{y}|\boldsymbol{X})$ will be computationally expensive, as there are many possible paths $\boldsymbol{l}$ for a given target label $\boldsymbol{y}$.
+At first it seems that calculating the conditional probability $p(\boldsymbol{y} \mid \boldsymbol{X})$ will be computationally expensive, as there are many possible paths $\boldsymbol{l}$ for a given target label $\boldsymbol{y}$.
 
 However, as we will see, the problem can be described recursively due to the dependency in valid paths for a given target label.
 Therefore the problem can be solved using a dynamic programming method called the foward-backward algorithm.
@@ -172,14 +172,14 @@ $$
 \prod_{t'=1}^{n_x} \hat{y}^{(t')}_{\boldsymbol{l}^{(t')}} \\ 
 & =
 \sum_{\boldsymbol{l} \in \beta^{-1}(\boldsymbol{y})}
-p(\boldsymbol{l}|\boldsymbol{X})
+p(\boldsymbol{l} \mid \boldsymbol{X})
 \end{align*}
 $$
 
 Then for an entire sequence the likehood is given by:
 
 $$
-p(\boldsymbol{l}|\boldsymbol{x})
+p(\boldsymbol{l} \mid \boldsymbol{x})
 =
 \sum_{t=1}^{n_x} \sum_{s=1}^{n_y} 
 \frac{\alpha_t(s)\beta_t(s)}{ \hat{y}_{\boldsymbol{l}^{(s)}}^{t} }
@@ -193,7 +193,7 @@ $$
 J(\boldsymbol{X},\boldsymbol{Y})
 = -
 \ln \left (
-p (\boldsymbol{y} | \boldsymbol{X})
+p (\boldsymbol{y}  \mid  \boldsymbol{X})
 \right )
 = -
 \ln \left (
@@ -207,7 +207,7 @@ Which when differentiated with respect to the softmax output $\hat{y}^{(t)}_k$ i
 $$
 \begin{align*}
 \frac{\partial J(\boldsymbol{X},\boldsymbol{Y})}{\partial \hat{y}^{(t)}_k} & =
-- \frac{1}{p (\boldsymbol{y} | \boldsymbol{X})} \cdot
+- \frac{1}{p (\boldsymbol{y}  \mid  \boldsymbol{X})} \cdot
 \frac{\partial}{\partial \hat{y}^{(t)}_k}
 \left(
 \sum_{t=1}^{n_x} \sum_{s=1}^{n_y} 
@@ -217,7 +217,7 @@ $$
 \end{align*}
 $$
 
-Where $\gamma$ is the set of all paths $s$ which pass though label $k$ at time $t$, and the likelihood of sequence $\boldsymbol{y}$ is given by $p(\boldsymbol{y}|\boldsymbol{X})=\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right)$, which is the probability of the sequence ending with the last token in $\boldsymbol{y}$ or a blank symbol.
+Where $\gamma$ is the set of all paths $s$ which pass though label $k$ at time $t$, and the likelihood of sequence $\boldsymbol{y}$ is given by $p(\boldsymbol{y} \mid \boldsymbol{X})=\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right)$, which is the probability of the sequence ending with the last token in $\boldsymbol{y}$ or a blank symbol.
 
 If we would like to observe the error for the unnormlized likelihoods $z^{(t)}_k$ then the derivative of the likelihood function becomes:
 
@@ -434,7 +434,7 @@ print(alpha)
 
 This is calculate according to the equation:
 
-$$p(\boldsymbol{y}|\boldsymbol{X})=\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right)$$
+$$p(\boldsymbol{y} \mid \boldsymbol{X})=\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right)$$
 
 as described above.
 
