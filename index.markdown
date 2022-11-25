@@ -5,7 +5,8 @@
 layout: home
 ---
 
-Currently a PhD student at Stellenbosch University. I form part of the DSP group in the Eletrical and Electronic department under the supervision of Thomas Niesler.
+Currently a PhD student at Stellenbosch University.
+I form part of the DSP group in the Electrical and Electronic department under the supervision of Thomas Niesler.
 Currently working in code-switched speech recognition in under-resourced South African languages.
 Interesting in all things deep learning, running, cycling, and triathlon.
 
