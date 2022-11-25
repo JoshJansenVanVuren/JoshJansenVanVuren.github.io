@@ -82,13 +82,13 @@ At first it seems that calculating the conditional probability $p(\boldsymbol{y}
 However, as we will see, the problem can be described recursively due to the dependency in valid paths for a given target label.
 Therefore the problem can be solved using a dynamic programming method called the foward-backward algorithm.
 
-Firstly $\boldsymbol{y}$ is updated to include blank symbols between every variable as well as at the beginning and end of sequence $\boldsymbol{y}$, such that $\boldsymbol{y} =\{'-',y_1,'-',y_2,\dots,y_{n_y},'-'\}$ then $n_y=n_y\cdot2 +1$. This ensures that we include blanks in the possible valid paths.
+Firstly $\boldsymbol{y}$ is updated to include blank symbols between every variable as well as at the beginning and end of sequence $\boldsymbol{y}$, such that $\boldsymbol{y} =\{\text{'-'},y_1,\text{'-'},y_2,\dots,y_{n_y},\text{'-'}\}$ then $n_y=n_y\cdot2 +1$. This ensures that we include blanks in the possible valid paths.
 
-Specifically lets consider the example target labelling $\boldsymbol{y} =\{'-','B','-','A','-','M','-'\}$, and an input sequence with length $n_x=6$.
+Specifically lets consider the example target labelling $\boldsymbol{y} =\{\text{'-'},\text{'B'},\text{'-'},\text{'A'},\text{'-'},\text{'M'},\text{'-'}\}$, and an input sequence with length $n_x=6$.
 The diagram which follows is all the valid paths which would result in the correct target sequence $\boldsymbol{y}$.
 Note that the valid labelings include the path beginning and ending with a blank token.
 
-<img src="2022-11-25-ctc-explained-media/t_vs_s_fix.drawio.png" alt="ctc_paths" width="400"/>
+<div style="width:400px;margin-left:auto;margin-right:auto;margin-bottom:20px;"><img src="/media/2022-11-25-ctc-explained-media/t_vs_s_fix.drawio.png" alt="ctc_paths" width="400" style="margin:auto;"/></div>
 
 
 The strategy is then to calculate the total probability for all the valid paths resulting in the target sequence $\boldsymbol{y}$, this can be efficiently accomplished by calculating the forward and backward variables:
@@ -107,20 +107,25 @@ To initalise $\alpha$ for $t=1$ is we utilise the following:
 * $\alpha_1(2)=\hat{y}_{\boldsymbol{y}^{(1)}}^{(1)}$ Probability of first character in ground truth $\boldsymbol{y}^{(1)}$,
 * $\alpha_1(s)=0 $ $\forall s > 2$.
 
-Explicity this means we allow paths which begin with either a blank symbol $\hat{y}_b^{(1)}$ or begin with the first target character $\hat{y}_{\boldsymbol{y}^{(1)}}^{(1)}$, while all other paths are set to zero probability.
+Explicity this means we allow paths which begin with either a blank symbol $\hat{y}_{b}^{(1)}$ or begin with the first target character $\hat{y}_{\boldsymbol{y}^{(1)}}^{(1)}$, while all other paths are set to zero probability.
 
 ### A recursive formulation
 
 We would like to obtain a recursive representation for $\alpha$. Again, let us consider the diagram above.
 Where the green path is the shortest route to produce BAM, and the red path is the longest valid path for $t=6$. The key observation here is that for a given target label $y$ the forward variables $\alpha_t(s)$ only ever depend on the previous forward variables $\alpha_{t-1}(s)$, $\alpha_{t-1}(s-1)$, or $\alpha_{t-1}(s-2)$, while all other transition probabilities are 0 because they do not result in valid paths. 
 
-According to the example ($\boldsymbol{y}=\{'-',B,'-',A,'-',M,'-'\}$) consider the following:
- * $\alpha_1(1)=\hat{y}_b^{(1)}$ 
- * $\alpha_1(2)=\hat{y}_{\boldsymbol{y}^{(2)}}^{(1)}$ 
- * $\alpha_1(3),\alpha_1(4),\alpha_1(5),\alpha_1(6),\alpha_1(7)= 0$ 
- * $\alpha_2(1)=\hat{y}_b^{(1)} \cdot \hat{y}_b^{(2)} = \alpha_1(1) \cdot \hat{y}_b^{(2)}$
- * $\alpha_2(2)= \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} + \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{b}^{(1)} = (\alpha_1(2) + \alpha_1(1)) \cdot \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} $
- * $\alpha_2(4)= \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{\boldsymbol{y}^{(4)}}^{(2)}$ 
+According to the example ($\boldsymbol{y}=\{\text{'-'},B,\text{'-'},A,\text{'-'},M,\text{'-'}\}$) consider the following:
+$$\alpha_1(1)=\hat{y}_b^{(1)}$$
+
+$$\alpha_1(2)=\hat{y}_{\boldsymbol{y}^{(2)}}^{(1)}$$ 
+
+$$\alpha_1(3),\alpha_1(4),\alpha_1(5),\alpha_1(6),\alpha_1(7)= 0$$
+
+$$\alpha_2(1)=\hat{y}_b^{(1)} \cdot \hat{y}_b^{(2)} = \alpha_1(1) \cdot \hat{y}_b^{(2)}$$
+
+$$ \alpha_2(2) = \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{\boldsymbol{y}^{(1)}}^{(1)} + \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{b}^{(1)} = (\alpha_1(2) + \alpha_1(1)) \cdot \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} $$
+
+$$\alpha_2(4)= \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{\boldsymbol{y}^{(4)}}^{(2)}$$
 
 Generalising $\alpha_2(2)$ above:
 $$\alpha_t(s)= (\alpha_{t-1}(s) + \alpha_{t-1}(s-1)) \cdot \hat{y}_{\boldsymbol{y}^{(t)}}^{(t)} $$
@@ -342,7 +347,7 @@ plt.show()
 
 
     
-![png](2022-11-25-ctc-explained-media/output_14_0.png)
+![png](/media/2022-11-25-ctc-explained-media/output_14_0.png)
     
 
 
@@ -576,7 +581,7 @@ print(grad)
 ### Visually comparing loss over time versus likelihoods
 
 This graph is somewhat equivalent to Figure 4.(b) in *Graves, A. et al 2006*.
-In the figure, we can compare the locations where the 'model' has made predictions for the three relevant characters (B in 1-2, '-' for 3-5, then 'A' for 6-7, and finally 'M' for 9-10 ) and the localised errors (negative gradients) at those same time points, i.e. the loss encourages the prediction of those characters at those time points and discourages (negative values) predicting them for other time-points.
+In the figure, we can compare the locations where the 'model' has made predictions for the three relevant characters ('B' in 1-2, '-' for 3-5, then 'A' for 6-7, and finally 'M' for 9-10 ) and the localised errors (negative gradients) at those same time points, i.e. the loss encourages the prediction of those characters at those time points and discourages (negative values) predicting them for other time-points.
 
 
 ```python
@@ -601,7 +606,7 @@ plt.show()
 
 
     
-![png](2022-11-25-ctc-explained-media/output_24_0.png)
+![png](/media/2022-11-25-ctc-explained-media/output_24_0.png)
     
 
 
