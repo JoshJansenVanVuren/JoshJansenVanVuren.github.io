@@ -1,4 +1,9 @@
-# Introduction to CTC
+---
+layout: post
+title:  "Introduction to Connectionist Temporal Classification"
+date:   2022-11-25 14:13:00 +0900
+categories: ctc speech-recognition
+---
 
 In this article we provide a detailed and explicit theoretical and subsequently practical explanination of connectionist temporal classification (CTC). Originally, CTC was introduced in [*Graves, A. et al 2006*](https://dl.acm.org/doi/pdf/10.1145/1143844.1143891). Since then, method has been applied in many SOTA speech recognition models ([*Wav2Vec2*](https://arxiv.org/pdf/2006.11477.pdf?fbclid=IwAR0UggIdWCosB9V00z1HqG0vohq7DZzZO_QjnqMXE-igvUWtWUJUq1AOB_w) etc.).
 
