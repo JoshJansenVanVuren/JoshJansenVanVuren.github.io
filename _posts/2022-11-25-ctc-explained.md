@@ -14,15 +14,15 @@ Overall the article is partitioned into the following sections:
   * Connectionist temporal classification as a likelihood function
   * Defining valid paths
   * The learning algorithm
-    * The forward variable $$\alpha$$
-    * The backward variable $$ \beta $$
+    * The forward variable $\alpha$
+    * The backward variable $\beta$
   * Towards a maximum likelihood function
   * The error function
 * In practice
   * Setting up dummy prediction and target sequences
-  * Calculating the forward variables $$ \alpha $$
+  * Calculating the forward variables $\alpha$
   * Calculating the sequence likelihood
-  * Calculating the backward variables $$ \beta $$
+  * Calculating the backward variables $\beta$
   * Calculating the gradients, and visualising error over time
   * Comparing result to `torch.nn.functional.CTCLoss`
 
@@ -38,125 +38,125 @@ import torch
 
 ## Speech recognition as temporal classification
 
-The task of speech recognition can be seen as labelling a sequence of given spectral features ($$ \boldsymbol{X}=\{\boldsymbol{x}^{(1)},\boldsymbol{x}^{(2)},\dots,\boldsymbol{x}^{(n_x)}\} $$ of dimensionality $$ (n_x,d) $$, where $$ n_x $$ is the number of features in time, and $$ d $$ is the dimensionality of each spectral representation) from an audio clip, with the correct transcription $$ \boldsymbol{y}=\{y^{(1)},y^{(2)},\dots,y^{(n_y)}\} $$ where $$ n_y $$ is the number of orthographic units (characters,phonemes) in the target sequence ($$ \boldsymbol{y} $$).
+The task of speech recognition can be seen as labelling a sequence of given spectral features ($\boldsymbol{X}=\{\boldsymbol{x}^{(1)},\boldsymbol{x}^{(2)},\dots,\boldsymbol{x}^{(n_x)}\}$ of dimensionality $(n_x,d)$, where $n_x$ is the number of features in time, and $d$ is the dimensionality of each spectral representation) from an audio clip, with the correct transcription $\boldsymbol{y}=\{y^{(1)},y^{(2)},\dots,y^{(n_y)}\}$ where $n_y$ is the number of orthographic units (characters,phonemes) in the target sequence ($\boldsymbol{y}$).
 
-Specifically our task is to train some model $$ f(\boldsymbol{X}) $$ to produce framewise classifications $$ \hat{\boldsymbol{Y}} $$ for the input features $$ \boldsymbol{X} $$ such that: $$ f(\boldsymbol{X}) \rightarrow \hat{\boldsymbol{Y}} $$. Where $$ \hat{\boldsymbol{Y}} $$ has the same number of dimensions in time as $$ \boldsymbol{X} $$ but has $$ d_y $$ dimensions per vector, which represent all of the possible output classes, characters or phonemes. Therefore the scalar value $$ \hat{y}=\hat{\boldsymbol{Y}}_{i,j} $$ at any timestep $$ 1 \leq i \leq n_y $$ and position $$ 1 \leq j \leq d $$ is assosiated with the likelihood of predicting the output class $$ j $$ (character or phoneme) at that timestep $$ i $$.
+Specifically our task is to train some model $f(\boldsymbol{X})$ to produce framewise classifications $\hat{\boldsymbol{Y}}$ for the input features $\boldsymbol{X}$ such that: $f(\boldsymbol{X}) \rightarrow \hat{\boldsymbol{Y}}$. Where $\hat{\boldsymbol{Y}}$ has the same number of dimensions in time as $\boldsymbol{X}$ but has $d_y$ dimensions per vector, which represent all of the possible output classes, characters or phonemes. Therefore the scalar value $\hat{y}=\hat{\boldsymbol{Y}}_{i,j}$ at any timestep $1 \leq i \leq n_y$ and position $1 \leq j \leq d$ is assosiated with the likelihood of predicting the output class $j$ (character or phoneme) at that timestep $i$.
 
-If we sample the output predictions by, for example, taking the $$ \text{argmax} $$ over all the timesteps, such that we obtain:
-$$  $$\hat{\boldsymbol{l}} = \text{argmax}_i \hat{\boldsymbol{Y}}$$  $$
+If we sample the output predictions by, for example, taking the $\text{argmax}$ over all the timesteps, such that we obtain:
+$$\hat{\boldsymbol{l}} = \text{argmax}_i \hat{\boldsymbol{Y}}$$
 
-Then we can calculate the edit distance for an example input $$ (\boldsymbol{X} $$ and transcription $$ \boldsymbol{y}) $$ using the function $$ \text{ED}(\hat{\boldsymbol{l}},\boldsymbol{y}) $$, where again $$ \hat{\boldsymbol{l}} = \text{argmax}_if(\boldsymbol{X}) $$.
+Then we can calculate the edit distance for an example input $(\boldsymbol{X}$ and transcription $\boldsymbol{y})$ using the function $\text{ED}(\hat{\boldsymbol{l}},\boldsymbol{y})$, where again $\hat{\boldsymbol{l}} = \text{argmax}_if(\boldsymbol{X})$.
 
 ## Connectionist temporal classification as a likelihood function
 
-The CTC loss function expects the prediction vector $$ \hat{\boldsymbol{y}}^{(i)} $$ to be normalized, therefore each element is associated with a probability of an output class, typically characters, with an additional class for a blank character '$$ - $$'.
+The CTC loss function expects the prediction vector $\hat{\boldsymbol{y}}^{(i)}$ to be normalized, therefore each element is associated with a probability of an output class, typically characters, with an additional class for a blank character '$-$'.
 
-Consequentially, we can the calculate the probability of observing a certain sequence of characters - defined as the path $$ \boldsymbol{l}=\{l^{(1)},l^{(2)},\dots,l^{(n_i)}\} $$ - through our prediction $$ \hat{\boldsymbol{Y}}=\{\hat{\boldsymbol{y}}^{(1)},\hat{\boldsymbol{y}}^{(2)},\dots,\hat{\boldsymbol{y}}^{(n_y)}\} $$ using:
+Consequentially, we can the calculate the probability of observing a certain sequence of characters - defined as the path $\boldsymbol{l}=\{l^{(1)},l^{(2)},\dots,l^{(n_i)}\}$ - through our prediction $\hat{\boldsymbol{Y}}=\{\hat{\boldsymbol{y}}^{(1)},\hat{\boldsymbol{y}}^{(2)},\dots,\hat{\boldsymbol{y}}^{(n_y)}\}$ using:
 
-$$  $$p(\boldsymbol{l}|\boldsymbol{X})=\prod_{i=1}^{n_i}\hat{y}^{(i)}_{l^{(i)}}$$  $$
+$$p(\boldsymbol{l}|\boldsymbol{X})=\prod_{i=1}^{n_i}\hat{y}^{(i)}_{l^{(i)}}$$
 
-Where the scalar $$ \hat{y}^{(i)}_{l^{(i)}} $$ is the probability assigned to character $$ l^{(i)} $$ at timestep $$ i $$.
+Where the scalar $\hat{y}^{(i)}_{l^{(i)}}$ is the probability assigned to character $l^{(i)}$ at timestep $i$.
 
 ## Defining valid paths
 
-One of the fundamental challenges in speech recognition is the mistmatch between the length of input and output sequences ($$ n_x \not= n_y $$), and the variance in the input features $$ \boldsymbol{X} $$ between speakers and dependency on the rate of speech.
-The advantage to CTC is the simple two rule set which allow sequences variable len $$ n_x $$ to be matched to arbirtarty target sequences $$ n_y $$.
+One of the fundamental challenges in speech recognition is the mistmatch between the length of input and output sequences ($n_x \not= n_y$), and the variance in the input features $\boldsymbol{X}$ between speakers and dependency on the rate of speech.
+The advantage to CTC is the simple two rule set which allow sequences variable len $n_x$ to be matched to arbirtarty target sequences $n_y$.
 
 Given that we are constrained to predicting characters within the range "a-z", with an additional space character ("|").
 We additionally add a blank character "-".
 
-Then we define the following two rules to decode any labelling $$ \boldsymbol{l} $$:
-1. Remove all adjoined repeated characters in a path $$ \boldsymbol{l} $$,
+Then we define the following two rules to decode any labelling $\boldsymbol{l}$:
+1. Remove all adjoined repeated characters in a path $\boldsymbol{l}$,
 2. Then remove all blank characters "-".
 
-This rule set is imposed by defining a mapping function $$ \beta $$ (which is a many-to-one mapping), which takes as input some labelling $$ \boldsymbol{l} $$, and returns the contracted form, for example: $$ \beta(\boldsymbol{l}=\{\textit{bbbll-aa--m}\})=\beta(\boldsymbol{l}=\{\textit{blll-aa--mm}\})=\textit{blam} $$
+This rule set is imposed by defining a mapping function $\beta$ (which is a many-to-one mapping), which takes as input some labelling $\boldsymbol{l}$, and returns the contracted form, for example: $\beta(\boldsymbol{l}=\{\textit{bbbll-aa--m}\})=\beta(\boldsymbol{l}=\{\textit{blll-aa--mm}\})=\textit{blam}$
 
-Then the inverse of the many to one mapping $$ \beta^{-1} $$ can be used to determine the probability of a target sequence $$ \boldsymbol{y} $$ by summing the probabilities of all the valid paths ($$ \boldsymbol{l} $$) which would result in the target sequence $$ \beta(\boldsymbol{l})=\boldsymbol{y} $$:
+Then the inverse of the many to one mapping $\beta^{-1}$ can be used to determine the probability of a target sequence $\boldsymbol{y}$ by summing the probabilities of all the valid paths ($\boldsymbol{l}$) which would result in the target sequence $\beta(\boldsymbol{l})=\boldsymbol{y}$:
 
-$$  $$p(\boldsymbol{y}|\boldsymbol{X})=\sum_{\boldsymbol{l}\in \beta^{-1}(\boldsymbol{y})} p(\boldsymbol{l}|\boldsymbol{X})$$  $$
+$$p(\boldsymbol{y}|\boldsymbol{X})=\sum_{\boldsymbol{l}\in \beta^{-1}(\boldsymbol{y})} p(\boldsymbol{l}|\boldsymbol{X})$$
 
 ## The learning algorithm
 
-At first it seems that calculating the conditional probability $$ p(\boldsymbol{y}|\boldsymbol{X}) $$ will be computationally expensive, as there are many possible paths $$ \boldsymbol{l} $$ for a given target label $$ \boldsymbol{y} $$.
+At first it seems that calculating the conditional probability $p(\boldsymbol{y}|\boldsymbol{X})$ will be computationally expensive, as there are many possible paths $\boldsymbol{l}$ for a given target label $\boldsymbol{y}$.
 
 However, as we will see, the problem can be described recursively due to the dependency in valid paths for a given target label.
 Therefore the problem can be solved using a dynamic programming method called the foward-backward algorithm.
 
-Firstly $$ \boldsymbol{y} $$ is updated to include blank symbols between every variable as well as at the beginning and end of sequence $$ \boldsymbol{y} $$, such that $$ \boldsymbol{y} =\{'-',y_1,'-',y_2,\dots,y_{n_y},'-'\} $$ then $$ n_y=n_y\cdot2 +1 $$. This ensures that we include blanks in the possible valid paths.
+Firstly $\boldsymbol{y}$ is updated to include blank symbols between every variable as well as at the beginning and end of sequence $\boldsymbol{y}$, such that $\boldsymbol{y} =\{'-',y_1,'-',y_2,\dots,y_{n_y},'-'\}$ then $n_y=n_y\cdot2 +1$. This ensures that we include blanks in the possible valid paths.
 
-Specifically lets consider the example target labelling $$ \boldsymbol{y} =\{'-','B','-','A','-','M','-'\} $$, and an input sequence with length $$ n_x=6 $$.
-The diagram which follows is all the valid paths which would result in the correct target sequence $$ \boldsymbol{y} $$.
+Specifically lets consider the example target labelling $\boldsymbol{y} =\{'-','B','-','A','-','M','-'\}$, and an input sequence with length $n_x=6$.
+The diagram which follows is all the valid paths which would result in the correct target sequence $\boldsymbol{y}$.
 Note that the valid labelings include the path beginning and ending with a blank token.
 
 <img src="2022-11-25-ctc-explained-media/t_vs_s_fix.drawio.png" alt="ctc_paths" width="400"/>
 
 
-The strategy is then to calculate the total probability for all the valid paths resulting in the target sequence $$ \boldsymbol{y} $$, this can be efficiently accomplished by calculating the forward and backward variables:
+The strategy is then to calculate the total probability for all the valid paths resulting in the target sequence $\boldsymbol{y}$, this can be efficiently accomplished by calculating the forward and backward variables:
 
-## Forward variable $$ \alpha $$
+## Forward variable $\alpha$
 
-We first define the forward variable $$ \alpha $$ as:
+We first define the forward variable $\alpha$ as:
 
-$$  $$\alpha_t(s)=\sum_{\boldsymbol{l}^{(1:t)} : \beta(\boldsymbol{l}^{(1:t)})=\boldsymbol{y}^{(1:s)}}\prod_{t'=1}^{t} \hat{y}^{(t')}_{\boldsymbol{l}^{(t')}}$$  $$
+$$\alpha_t(s)=\sum_{\boldsymbol{l}^{(1:t)} : \beta(\boldsymbol{l}^{(1:t)})=\boldsymbol{y}^{(1:s)}}\prod_{t'=1}^{t} \hat{y}^{(t')}_{\boldsymbol{l}^{(t')}}$$
 
-Where the sum is computed over all the paths $$ \boldsymbol{l}^{(1:t)} $$ which would result in target label $$ \boldsymbol{y}^{(1:s)} $$, and the product is computed up to the current timestep $$ t $$.
+Where the sum is computed over all the paths $\boldsymbol{l}^{(1:t)}$ which would result in target label $\boldsymbol{y}^{(1:s)}$, and the product is computed up to the current timestep $t$.
 
-To initalise $$ \alpha $$ for $$ t=1 $$ is we utilise the following:
+To initalise $\alpha$ for $t=1$ is we utilise the following:
 
-* $$ \alpha_1(1)=\hat{y}_b^{(1)} $$ Probabililty of blank at t=1,
-* $$ \alpha_1(2)=\hat{y}_{\boldsymbol{y}^{(1)}}^{(1)} $$ Probability of first character in ground truth $$ \boldsymbol{y}^{(1)} $$,
-* $$ \alpha_1(s)=0  $$ $$ \forall s > 2 $$.
+* $\alpha_1(1)=\hat{y}_b^{(1)}$ Probabililty of blank at t=1,
+* $\alpha_1(2)=\hat{y}_{\boldsymbol{y}^{(1)}}^{(1)}$ Probability of first character in ground truth $\boldsymbol{y}^{(1)}$,
+* $\alpha_1(s)=0 $ $\forall s > 2$.
 
-Explicity this means we allow paths which begin with either a blank symbol $$ \hat{y}_b^{(1)} $$ or begin with the first target character $$ \hat{y}_{\boldsymbol{y}^{(1)}}^{(1)} $$, while all other paths are set to zero probability.
+Explicity this means we allow paths which begin with either a blank symbol $\hat{y}_b^{(1)}$ or begin with the first target character $\hat{y}_{\boldsymbol{y}^{(1)}}^{(1)}$, while all other paths are set to zero probability.
 
 ### A recursive formulation
 
-We would like to obtain a recursive representation for $$ \alpha $$. Again, let us consider the diagram above.
-Where the green path is the shortest route to produce BAM, and the red path is the longest valid path for $$ t=6 $$. The key observation here is that for a given target label $$ y $$ the forward variables $$ \alpha_t(s) $$ only ever depend on the previous forward variables $$ \alpha_{t-1}(s) $$, $$ \alpha_{t-1}(s-1) $$, or $$ \alpha_{t-1}(s-2) $$, while all other transition probabilities are 0 because they do not result in valid paths. 
+We would like to obtain a recursive representation for $\alpha$. Again, let us consider the diagram above.
+Where the green path is the shortest route to produce BAM, and the red path is the longest valid path for $t=6$. The key observation here is that for a given target label $y$ the forward variables $\alpha_t(s)$ only ever depend on the previous forward variables $\alpha_{t-1}(s)$, $\alpha_{t-1}(s-1)$, or $\alpha_{t-1}(s-2)$, while all other transition probabilities are 0 because they do not result in valid paths. 
 
-According to the example ($$ \boldsymbol{y}=\{'-',B,'-',A,'-',M,'-'\} $$) consider the following:
- * $$ \alpha_1(1)=\hat{y}_b^{(1)} $$ 
- * $$ \alpha_1(2)=\hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} $$ 
- * $$ \alpha_1(3),\alpha_1(4),\alpha_1(5),\alpha_1(6),\alpha_1(7)= 0 $$ 
- * $$ \alpha_2(1)=\hat{y}_b^{(1)} \cdot \hat{y}_b^{(2)} = \alpha_1(1) \cdot \hat{y}_b^{(2)} $$
- * $$ \alpha_2(2)= \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} + \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{b}^{(1)} = (\alpha_1(2) + \alpha_1(1)) \cdot \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)}  $$
- * $$ \alpha_2(4)= \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{\boldsymbol{y}^{(4)}}^{(2)} $$ 
+According to the example ($\boldsymbol{y}=\{'-',B,'-',A,'-',M,'-'\}$) consider the following:
+ * $\alpha_1(1)=\hat{y}_b^{(1)}$ 
+ * $\alpha_1(2)=\hat{y}_{\boldsymbol{y}^{(2)}}^{(1)}$ 
+ * $\alpha_1(3),\alpha_1(4),\alpha_1(5),\alpha_1(6),\alpha_1(7)= 0$ 
+ * $\alpha_2(1)=\hat{y}_b^{(1)} \cdot \hat{y}_b^{(2)} = \alpha_1(1) \cdot \hat{y}_b^{(2)}$
+ * $\alpha_2(2)= \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} + \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{b}^{(1)} = (\alpha_1(2) + \alpha_1(1)) \cdot \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} $
+ * $\alpha_2(4)= \hat{y}_{\boldsymbol{y}^{(2)}}^{(1)} \cdot \hat{y}_{\boldsymbol{y}^{(4)}}^{(2)}$ 
 
-Generalising $$ \alpha_2(2) $$ above:
-$$  $$\alpha_t(s)= (\alpha_{t-1}(s) + \alpha_{t-1}(s-1)) \cdot \hat{y}_{\boldsymbol{y}^{(t)}}^{(t)} $$  $$
+Generalising $\alpha_2(2)$ above:
+$$\alpha_t(s)= (\alpha_{t-1}(s) + \alpha_{t-1}(s-1)) \cdot \hat{y}_{\boldsymbol{y}^{(t)}}^{(t)} $$
 
-Note that for jumps between non-blanks (i.e. $$ \alpha_2(4) $$ above: B (s=2) -> A (s=4)) there is an additional term in the recursive form:
+Note that for jumps between non-blanks (i.e. $\alpha_2(4)$ above: B (s=2) -> A (s=4)) there is an additional term in the recursive form:
 
-$$  $$\alpha_t(s)= (\alpha_{t-1}(s) + \alpha_{t-1}(s-1) + \alpha_{t-1}(s-2)) \cdot \hat{y}_{\boldsymbol{y}^{(t)}}^{(t)} $$  $$
+$$\alpha_t(s)= (\alpha_{t-1}(s) + \alpha_{t-1}(s-1) + \alpha_{t-1}(s-2)) \cdot \hat{y}_{\boldsymbol{y}^{(t)}}^{(t)} $$
 
-## Backward variable $$ \beta $$
+## Backward variable $\beta$
 
 Similarly, the backward variable is defined as:
 
-$$  $$\beta_t(s)=\sum_{\boldsymbol{l}^{(t:n_x)}:\beta(\boldsymbol{l}^{(t:n_x)})=\boldsymbol{y}^{(s:n_y)}} \prod_{t'=t}^{n_x}\hat{y}^{(t')}_{\boldsymbol{l}^{(t')}}$$  $$
+$$\beta_t(s)=\sum_{\boldsymbol{l}^{(t:n_x)}:\beta(\boldsymbol{l}^{(t:n_x)})=\boldsymbol{y}^{(s:n_y)}} \prod_{t'=t}^{n_x}\hat{y}^{(t')}_{\boldsymbol{l}^{(t')}}$$
 
-Then the initialisations for final timestep $$ t=n_x $$:
-* $$ \beta_t(n_y) = \hat{y}_b^{(n_y)} $$ Probability of final token being blank
-* $$ \beta_t(n_y - 1) = \hat{y}^{(n_y)}_{\boldsymbol{y}^{(t')}} $$ Probability assigned to final character in target sequence
-* $$ \beta_t(s) = 0 $$ $$ \forall s < n_y - 1 $$
+Then the initialisations for final timestep $t=n_x$:
+* $\beta_t(n_y) = \hat{y}_b^{(n_y)}$ Probability of final token being blank
+* $\beta_t(n_y - 1) = \hat{y}^{(n_y)}_{\boldsymbol{y}^{(t')}}$ Probability assigned to final character in target sequence
+* $\beta_t(s) = 0$ $\forall s < n_y - 1$
 
 Then similar to the forward variable, the backward variable has the following two recursive form:
 
-$$  $$
+$$
 \beta_t(s) = \left\{
 \begin{matrix}
 (\beta_{t+1}(s) + \beta_{t+1}(s+1)) \cdot \hat{y}_{\boldsymbol{y}^{(t')}}^{(t)} \quad \quad  \text{for blank or same characters,}
 \\
 (\beta_{t+1}(s) + \beta_{t+1}(s+1) + \beta_{t+1}(s+2) )  \cdot \hat{y}_{\boldsymbol{y}^{(t')}}^{(t)} \quad \quad \quad \text{otherwise}
 \end{matrix} \right.
-$$  $$
+$$
 
 ## Towards a maximum likelihood function
 
 Our ultimate aim is to formulate these two functions as a method to estimate the likelihood of a given sequence from some model prediction.
 Towards this end, we multiply the forward and backward variables:
 
-$$  $$
+$$
 \begin{align*}
 \alpha_t(s) \beta_t(s) &  = 
 \sum_{\boldsymbol{l}^{(1:t)} : \beta(\boldsymbol{l}^{(1:t)})=\boldsymbol{y}^{(1:s)}}\prod_{t'=1}^{t} \hat{y}^{(t')}_{\boldsymbol{l}^{(t')}}
@@ -174,22 +174,22 @@ $$  $$
 \sum_{\boldsymbol{l} \in \beta^{-1}(\boldsymbol{y})}
 p(\boldsymbol{l}|\boldsymbol{X})
 \end{align*}
-$$  $$
+$$
 
 Then for an entire sequence the likehood is given by:
 
-$$  $$
+$$
 p(\boldsymbol{l}|\boldsymbol{x})
 =
 \sum_{t=1}^{n_x} \sum_{s=1}^{n_y} 
 \frac{\alpha_t(s)\beta_t(s)}{ \hat{y}_{\boldsymbol{l}^{(s)}}^{t} }
-$$  $$
+$$
 
 ## The error function
 
-Then the equation above can be treated as a likelihood estimate which we would like to maximise. Specifically we optimise the following function for an input target pair ($$ \boldsymbol{X},\boldsymbol{Y} $$) by descending its gradient:
+Then the equation above can be treated as a likelihood estimate which we would like to maximise. Specifically we optimise the following function for an input target pair ($\boldsymbol{X},\boldsymbol{Y}$) by descending its gradient:
 
-$$  $$
+$$
 J(\boldsymbol{X},\boldsymbol{Y})
 = -
 \ln \left (
@@ -200,11 +200,11 @@ p (\boldsymbol{y} | \boldsymbol{X})
 \sum_{t=1}^{n_x} \sum_{s=1}^{n_y} 
 \frac{\alpha_t(s)\beta_t(s)}{ \hat{y}_{\boldsymbol{y}^{(s)}}^{t} }
 \right )
-$$  $$
+$$
 
-Which when differentiated with respect to the softmax output $$ \hat{y}^{(t)}_k $$ is:
+Which when differentiated with respect to the softmax output $\hat{y}^{(t)}_k$ is:
 
-$$  $$
+$$
 \begin{align*}
 \frac{\partial J(\boldsymbol{X},\boldsymbol{Y})}{\partial \hat{y}^{(t)}_k} & =
 - \frac{1}{p (\boldsymbol{y} | \boldsymbol{X})} \cdot
@@ -215,18 +215,18 @@ $$  $$
 \right) \\
 & = \frac{1}{ \left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right) \cdot \left(\hat{y}^{(t)}_k \right)^2} \sum_{s \in \gamma} \alpha_t(s)\beta_t(s)
 \end{align*}
-$$  $$
+$$
 
-Where $$ \gamma $$ is the set of all paths $$ s $$ which pass though label $$ k $$ at time $$ t $$, and the likelihood of sequence $$ \boldsymbol{y} $$ is given by $$ p(\boldsymbol{y}|\boldsymbol{X})=\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right) $$, which is the probability of the sequence ending with the last token in $$ \boldsymbol{y} $$ or a blank symbol.
+Where $\gamma$ is the set of all paths $s$ which pass though label $k$ at time $t$, and the likelihood of sequence $\boldsymbol{y}$ is given by $p(\boldsymbol{y}|\boldsymbol{X})=\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right)$, which is the probability of the sequence ending with the last token in $\boldsymbol{y}$ or a blank symbol.
 
-If we would like to observe the error for the unnormlized likelihoods $$ z^{(t)}_k $$ then the derivative of the likelihood function becomes:
+If we would like to observe the error for the unnormlized likelihoods $z^{(t)}_k$ then the derivative of the likelihood function becomes:
 
-$$  $$
+$$
 \begin{align*}
 \frac{\partial J(\boldsymbol{X},\boldsymbol{Y})}{\partial z^{(t)}_k} & =
 \hat{y}^{(t)}_k - \frac{\sum_{s \in \gamma} \alpha_t(s)\beta_t(s)}{\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right) \cdot \hat{y}^{(t)}_k}
 \end{align*}
-$$  $$
+$$
 
 ## In practice
 
@@ -346,18 +346,18 @@ plt.show()
     
 
 
-## Calculating the forward variables $$ \alpha $$
+## Calculating the forward variables $\alpha$
 
-Now we will implement code to calculate all the forward variables $$ \alpha $$ according to:
+Now we will implement code to calculate all the forward variables $\alpha$ according to:
 
-$$  $$
+$$
 \beta_t(s) = \left\{
 \begin{matrix}
 \alpha_t(s)= (\alpha_{t-1}(s) + \alpha_{t-1}(s-1)) \cdot \hat{y}_{\boldsymbol{y}^{(t)}}^{(t)} \quad \quad  \text{for blank or same characters,}
 \\
 \alpha_t(s)= (\alpha_{t-1}(s) + \alpha_{t-1}(s-1) + \alpha_{t-1}(s-2)) \cdot \hat{y}_{\boldsymbol{y}^{(t)}}^{(t)} \quad \quad \quad \quad \text{otherwise}
 \end{matrix} \right.
-$$  $$
+$$
 
 Recall the conditions for initialisations as laid out previously need to be implemented.
 
@@ -434,7 +434,7 @@ print(alpha)
 
 This is calculate according to the equation:
 
-$$  $$p(\boldsymbol{y}|\boldsymbol{X})=\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right)$$  $$
+$$p(\boldsymbol{y}|\boldsymbol{X})=\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right)$$
 
 as described above.
 
@@ -451,18 +451,18 @@ print(f"Negative Log-Likelihood: {- np.log(likelihood):4f}")
     Negative Log-Likelihood: 2.752467
 
 
-## Calculating the backward variables $$ \beta $$
+## Calculating the backward variables $\beta$
 
 Similar to the forward variables, this section implements the code for the backward variables:
 
-$$  $$
+$$
 \beta_t(s) = \left\{
 \begin{matrix}
 (\beta_{t+1}(s) + \beta_{t+1}(s+1)) \cdot \hat{y}_{\boldsymbol{y}^{(t')}}^{(t)} \quad \quad  \text{for blank or same characters,}
 \\
 (\beta_{t+1}(s) + \beta_{t+1}(s+1) + \beta_{t+1}(s+2) )  \cdot \hat{y}_{\boldsymbol{y}^{(t')}}^{(t)} \quad \quad \quad \text{otherwise}
 \end{matrix} \right.
-$$  $$
+$$
 
 
 ```python
@@ -534,12 +534,12 @@ print(beta)
 
 Finally we can now calculate the gradients according to the equation:
 
-$$  $$
+$$
 \begin{align*}
 \frac{\partial J(\boldsymbol{X},\boldsymbol{Y})}{\partial z^{(t)}_k} & =
 \hat{y}^{(t)}_k - \frac{\sum_{s \in \gamma} \alpha_t(s)\beta_t(s)}{\left( \alpha_{n_x}(n_y) + \alpha_{n_x}(n_y - 1) \right) \cdot \hat{y}^{(t)}_k}
 \end{align*}
-$$  $$
+$$
 
 
 ```python
